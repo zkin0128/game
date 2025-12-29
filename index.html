@@ -2,156 +2,127 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KingShot 原型開發</title>
+    <title>Kingshot Survival - Web Edition</title>
     <style>
-        body { margin: 0; background: #222; overflow: hidden; color: white; font-family: sans-serif; }
-        canvas { display: block; background: #333; margin: auto; }
-        .ui { position: absolute; top: 10px; left: 10px; pointer-events: none; }
+        body { font-family: 'Segoe UI', serif; background: #1a1a1a; color: #d4af37; margin: 0; padding: 20px; }
+        #game-ui { display: grid; grid-template-columns: 1fr 300px; gap: 20px; max-width: 1000px; margin: auto; }
+        .stat-box { background: #2d2d2d; border: 2px solid #d4af37; padding: 15px; border-radius: 8px; margin-bottom: 10px; }
+        .log-box { height: 300px; background: #000; color: #0f0; padding: 10px; overflow-y: auto; font-size: 0.9rem; border: 1px solid #444; }
+        button { background: #d4af37; color: #1a1a1a; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; margin: 5px; }
+        button:disabled { background: #555; cursor: not-allowed; }
+        .event-alert { color: #ff4444; font-weight: bold; }
     </style>
 </head>
 <body>
-    <div class="ui">
-        <h2>KingShot 測試版</h2>
-        <p>操作：拖拽藍色球體進行彈射</p>
+
+    <h1 style="text-align: center;">🛡️ KINGSHOT: 王朝餘火</h1>
+
+    <div id="game-ui">
+        <div class="main-panel">
+            <div class="stat-box">
+                <h2>領地狀態 - 第 <span id="day">1</span> 天</h2>
+                <p>人口: <span id="pop">50</span> | 糧食: <span id="food">100</span> | 木材: <span id="wood">50</span></p>
+                <p>文明火種: <span id="civ">100%</span> (低於 0% 遊戲結束)</p>
+            </div>
+
+            <div class="stat-box">
+                <h3>建設與指令</h3>
+                <button onclick="build('farm')">建造農田 (20木材)</button>
+                <button onclick="build('house')">建造民宅 (30木材)</button>
+                <button onclick="gatherWood()">派遣採集 (木材+10)</button>
+            </div>
+        </div>
+
+        <div class="side-panel">
+            <h3>王國日誌</h3>
+            <div id="log" class="log-box"></div>
+        </div>
     </div>
-    <canvas id="gameCanvas"></canvas>
 
     <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
+        let gameState = {
+            day: 1,
+            pop: 50,
+            food: 100,
+            wood: 50,
+            civ: 100,
+            farms: 1,
+            houses: 1
+        };
 
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+        function addLog(msg, isAlert = false) {
+            const log = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            log.innerHTML = `<p class="${isAlert ? 'event-alert' : ''}">[${time}] ${msg}</p>` + log.innerHTML;
+        }
 
-        // 物理參數
-        const friction = 0.98; // 摩擦力 (0.98 代表每幀速度保留 98%)
-        const wallBounciness = 0.7; // 撞牆後的彈性損耗
+        function gatherWood() {
+            gameState.wood += 10;
+            addLog("派遣子民進入森林，採集了 10 單位木材。");
+            updateUI();
+        }
 
-        // 球體類別
-        class Ball {
-            constructor(x, y, radius, color, isPlayer = false) {
-                this.x = x;
-                this.y = y;
-                this.radius = radius;
-                this.color = color;
-                this.vx = 0;
-                this.vy = 0;
-                this.isPlayer = isPlayer;
+        function build(type) {
+            if (type === 'farm' && gameState.wood >= 20) {
+                gameState.wood -= 20;
+                gameState.farms++;
+                addLog("農田建成，糧食產量提升。");
+            } else if (type === 'house' && gameState.wood >= 30) {
+                gameState.wood -= 30;
+                gameState.houses++;
+                gameState.pop += 10;
+                addLog("新建了民宅，流離失所的難民加入了我們。");
+            } else {
+                addLog("資源不足，無法建設！", true);
             }
+            updateUI();
+        }
 
-            draw() {
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                ctx.fillStyle = this.color;
-                ctx.fill();
-                ctx.closePath();
-            }
-
-            update() {
-                // 移動
-                this.x += this.vx;
-                this.y += this.vy;
-
-                // 阻力
-                this.vx *= friction;
-                this.vy *= friction;
-
-                // 停止檢測
-                if (Math.abs(this.vx) < 0.1) this.vx = 0;
-                if (Math.abs(this.vy) < 0.1) this.vy = 0;
-
-                // 邊界碰撞
-                if (this.x + this.radius > canvas.width || this.x - this.radius < 0) {
-                    this.vx = -this.vx * wallBounciness;
-                    this.x = this.x < this.radius ? this.radius : canvas.width - this.radius;
-                }
-                if (this.y + this.radius > canvas.height || this.y - this.radius < 0) {
-                    this.vy = -this.vy * wallBounciness;
-                    this.y = this.y < this.radius ? this.radius : canvas.height - this.radius;
-                }
+        function updateUI() {
+            document.getElementById('day').innerText = gameState.day;
+            document.getElementById('pop').innerText = gameState.pop;
+            document.getElementById('food').innerText = gameState.food;
+            document.getElementById('wood').innerText = gameState.wood;
+            document.getElementById('civ').innerText = gameState.civ + "%";
+            
+            if (gameState.civ <= 0) {
+                alert("文明火種熄滅，王朝覆滅...");
+                location.reload();
             }
         }
 
-        const player = new Ball(100, canvas.height / 2, 25, '#3b82f6', true);
-        const enemy = new Ball(canvas.width - 100, canvas.height / 2, 30, '#ef4444');
-
-        let isDragging = false;
-        let dragStartX, dragStartY;
-        let currentMouseX, currentMouseY;
-
-        // 監聽操作
-        canvas.addEventListener('mousedown', (e) => {
-            const dist = Math.hypot(e.clientX - player.x, e.clientY - player.y);
-            if (dist < player.radius && player.vx === 0 && player.vy === 0) {
-                isDragging = true;
-                dragStartX = player.x;
-                dragStartY = player.y;
-            }
-        });
-
-        canvas.addEventListener('mousemove', (e) => {
-            if (isDragging) {
-                currentMouseX = e.clientX;
-                currentMouseY = e.clientY;
-            }
-        });
-
-        canvas.addEventListener('mouseup', (e) => {
-            if (isDragging) {
-                isDragging = false;
-                // 計算力道 (反向彈射)
-                const dx = dragStartX - e.clientX;
-                const dy = dragStartY - e.clientY;
-                player.vx = dx * 0.15; // 0.15 為力道倍率
-                player.vy = dy * 0.15;
-            }
-        });
-
-        // 碰撞檢查
-        function checkCollision(b1, b2) {
-            const dx = b2.x - b1.x;
-            const dy = b2.y - b1.y;
-            const distance = Math.hypot(dx, dy);
-
-            if (distance < b1.radius + b2.radius) {
-                // 簡單的動量交換邏輯
-                const angle = Math.atan2(dy, dx);
-                const speed = Math.hypot(b1.vx, b1.vy);
-                
-                b2.vx = Math.cos(angle) * speed;
-                b2.vy = Math.sin(angle) * speed;
-                
-                b1.vx = -Math.cos(angle) * speed * 0.5;
-                b1.vy = -Math.sin(angle) * speed * 0.5;
-            }
-        }
-
-        function gameLoop() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // 繪製預測線
-            if (isDragging) {
-                ctx.beginPath();
-                ctx.moveTo(player.x, player.y);
-                ctx.lineTo(player.x + (dragStartX - currentMouseX), player.y + (dragStartY - currentMouseY));
-                ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
-                ctx.setLineDash([5, 5]);
-                ctx.stroke();
-                ctx.setLineDash([]);
+        // 遊戲核心循環 (每 5 秒代表一天)
+        setInterval(() => {
+            gameState.day++;
+            
+            // 生產與消耗
+            let production = gameState.farms * 15;
+            let consumption = gameState.pop * 0.5;
+            gameState.food += (production - Math.floor(consumption));
+            
+            // 飢荒判定
+            if (gameState.food < 0) {
+                gameState.food = 0;
+                gameState.pop -= 5;
+                gameState.civ -= 10;
+                addLog("飢荒蔓延！子民正在死去，文明正在衰退。", true);
             }
 
-            player.update();
-            enemy.update();
-            checkCollision(player, enemy);
+            // 隨機事件
+            if (Math.random() > 0.8) {
+                const events = [
+                    { name: "暴民入侵", effect: () => { gameState.wood -= 10; addLog("暴民洗劫了倉庫，木材損失 10。", true); } },
+                    { name: "時疫爆發", effect: () => { gameState.pop -= 8; addLog("時疫奪走了數條生命。", true); } },
+                    { name: "商隊抵達", effect: () => { gameState.food += 20; addLog("遠方的商隊留下了糧食。"); } }
+                ];
+                const evt = events[Math.floor(Math.random() * events.length)];
+                evt.effect();
+            }
 
-            player.draw();
-            enemy.draw();
+            updateUI();
+        }, 5000);
 
-            requestAnimationFrame(gameLoop);
-        }
-
-        gameLoop();
+        addLog("叛亂發生了，你帶領倖存者建立營地。");
     </script>
 </body>
 </html>

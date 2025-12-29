@@ -1,1 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>KINGSHOT: 王朝餘火</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', serif;
+      margin: 0;
+      padding: 0;
+      background: #1a1a1a url('campfire-scene.jpg') no-repeat center center;
+      background-size: cover;
+      color: #d4af37;
+      animation: flicker 3s infinite;
+    }
 
+    @keyframes flicker {
+      0%, 100% { background-color: #1a1a1a; }
+      50% { background-color: #222; }
+    }
+
+    h1 {
+      text-align: center;
+      padding-top: 20px;
+    }
+
+    #main-menu, #game-ui {
+      max-width: 1000px;
+      margin: auto;
+      padding: 30px;
+      background: rgba(0, 0, 0, 0.75);
+      border-radius: 12px;
+      display: none;
+    }
+
+    #main-menu.active, #game-ui.active {
+      display: block;
+    }
+
+    .menu-btn {
+      display: block;
+      margin: 20px auto;
+      padding: 15px 30px;
+      font-size: 1.2rem;
+      background: #88b04b;
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .menu-btn:hover {
+      background: #a2c523;
+    }
+
+    .stat-box {
+      background: #2d2d2d;
+      border: 2px solid #d4af37;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+
+    .log-box {
+      height: 300px;
+      background: #000;
+      color: #0f0;
+      padding: 10px;
+      overflow-y: auto;
+      font-size: 0.9rem;
+      border: 1px solid #444;
+    }
+
+    button {
+      background: #d4af37;
+      color: #1a1a1a;
+      border: none;
+      padding: 10px 20px;
+      cursor: pointer;
+      font-weight: bold;
+      margin: 5px;
+      border-radius: 6px;
+    }
+
+    .event-alert {
+      color: #ff4444;
+      font-weight: bold;
+      animation: shake 0.4s ease;
+    }
+
+    @keyframes shake {
+      0% { transform: translateX(0); }
+      25% { transform: translateX(-3px); }
+      50% { transform: translateX(3px); }
+      75% { transform: translateX(-3px); }
+      100% { transform: translateX(0); }
+    }
+
+    @keyframes pop {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.3); color: #fff; }
+      100% { transform: scale(1); }
+    }
+
+    .stat-change {
+      animation: pop 0.3s ease;
+    }
+
+    .upgrade-effect {
+      animation: glow 1s ease;
+    }
+
+    @keyframes glow {
+      0% { box-shadow: 0 0 5px #fff; transform: scale(1); }
+      50% { box-shadow: 0 0 20px #fff; transform: scale(1.1); }
+      100% { box-shadow: 0 0 5px #fff; transform: scale(1); }
+    }
+
+    #music-toggle {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #d4af37;
+      color: #1a1a1a;
+      border: none;
+      padding: 10px;
+      border-radius: 50%;
+      font-size: 1.2rem;
+      cursor: pointer;
+    }
+
+    .character-img {
+      display: block;
+      margin: 0 auto;
+      max-width: 300px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px #000;
+    }
+  </style>
+</head>
+<body>
+<h1>🛡️ KINGSHOT: 王朝餘火</h1>
+<p style="text-align:center"><em>升級版：戰鬥系統、建築動畫、地圖擴張、自動採集</em></p>
+<script>
+alert("請將此檔案與背景音樂 forest-fire.mp3 放在同一資料夾中，並使用桌面瀏覽器開啟以獲得最佳體驗。");
+</script>
+</body>
+</html>

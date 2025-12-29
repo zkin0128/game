@@ -2,31 +2,33 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <title>KINGSHOT: 王朝餘火（簡化測試版）</title>
+  <title>KINGSHOT: 王朝餘火</title>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
-      background: #1a1a1a;
-      color: #d4af37;
       margin: 0;
-      padding: 20px;
+      padding: 0;
+      background: #1a1a1a url('campfire-scene.jpg') no-repeat center center;
+      background-size: cover;
+      color: #d4af37;
     }
-    h1 { text-align: center; }
+    h1 { text-align: center; padding: 20px; }
     #main-menu, #game-ui {
       max-width: 800px;
       margin: auto;
+      padding: 20px;
+      background: rgba(0,0,0,0.7);
+      border-radius: 12px;
       display: none;
     }
-    #main-menu.active, #game-ui.active {
-      display: block;
-    }
+    #main-menu.active, #game-ui.active { display: block; }
     .menu-btn {
       display: block;
-      margin: 20px auto;
-      padding: 15px 30px;
+      margin: 10px auto;
+      padding: 12px 24px;
       font-size: 1.2rem;
-      background: #d4af37;
-      color: #1a1a1a;
+      background: #88b04b;
+      color: #fff;
       border: none;
       border-radius: 8px;
       cursor: pointer;
@@ -56,6 +58,18 @@
       margin: 5px;
       border-radius: 6px;
     }
+    #music-toggle {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #d4af37;
+      color: #1a1a1a;
+      border: none;
+      padding: 10px;
+      border-radius: 50%;
+      font-size: 1.2rem;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -65,104 +79,102 @@
 <div id="main-menu" class="active">
   <button class="menu-btn" onclick="startGame()">開始遊戲</button>
   <button class="menu-btn" onclick="alert('你將扮演一位領主，在末日後重建文明。建設、管理資源、抵禦災難，維持文明火種。')">遊戲說明</button>
+  <button class="menu-btn" onclick="toggleMusic()">🎵 音樂開關</button>
 </div>
 
 <div id="game-ui">
   <div class="stat-box">
-    <h2>領地狀態 - 第 <span id="day">1</span> 天</h2>
+    <h2>第 <span id="day">1</span> 天</h2>
     <p>人口: <span id="pop">50</span> | 糧食: <span id="food">100</span> | 木材: <span id="wood">50</span></p>
-    <p>文明火種: <span id="civ">100%</span> (低於 0% 遊戲結束)</p>
+    <p>文明火種: <span id="civ">100%</span></p>
   </div>
-
   <div class="stat-box">
     <h3>建設與指令</h3>
     <button onclick="build('farm')">建造農田 (20木材)</button>
     <button onclick="build('house')">建造民宅 (30木材)</button>
-    <button onclick="gatherWood()">派遣採集 (木材+10)</button>
+    <button onclick="gatherWood()">派遣採集 (每10秒+50)</button>
   </div>
-
   <div class="stat-box">
     <h3>王國日誌</h3>
     <div id="log" class="log-box"></div>
   </div>
 </div>
 
+<audio id="bgm" autoplay loop>
+  <source src="forest-fire.mp3" type="audio/mpeg">
+</audio>
+<button id="music-toggle" onclick="toggleMusic()">🎵</button>
+
 <script>
-  let gameState = {
-    day: 1,
-    pop: 50,
-    food: 100,
-    wood: 50,
-    civ: 100,
-    farms: 1,
-    houses: 1
-  };
+let gameState = {
+  day: 1, pop: 50, food: 100, wood: 50, civ: 100, farms: 1, houses: 1
+};
 
-  function startGame() {
-    document.getElementById("main-menu").classList.remove("active");
-    document.getElementById("game-ui").classList.add("active");
-    addLog("叛亂發生了，你帶領倖存者建立營地。");
+function startGame() {
+  document.getElementById("main-menu").classList.remove("active");
+  document.getElementById("game-ui").classList.add("active");
+  addLog("叛亂發生了，你帶領倖存者建立營地。");
+  updateUI();
+}
+
+function addLog(msg) {
+  const log = document.getElementById('log');
+  const time = new Date().toLocaleTimeString();
+  log.innerHTML = `<p>[${time}] ${msg}</p>` + log.innerHTML;
+}
+
+function gatherWood() {
+  addLog("伐木隊出發，10秒後回報...");
+  setTimeout(() => {
+    gameState.wood += 50;
+    addLog("伐木隊回報：獲得 50 單位木材。");
     updateUI();
+  }, 10000);
+}
+
+function build(type) {
+  if (type === 'farm' && gameState.wood >= 20) {
+    gameState.wood -= 20;
+    gameState.farms++;
+    addLog("農田建成，糧食產量提升。");
+  } else if (type === 'house' && gameState.wood >= 30) {
+    gameState.wood -= 30;
+    gameState.houses++;
+    gameState.pop += 10;
+    addLog("新建了民宅，人口增加。");
+  } else {
+    addLog("資源不足，無法建設！");
   }
+  updateUI();
+}
 
-  function addLog(msg) {
-    const log = document.getElementById('log');
-    const time = new Date().toLocaleTimeString();
-    log.innerHTML = `<p>[${time}] ${msg}</p>` + log.innerHTML;
+function updateUI() {
+  document.getElementById('day').innerText = gameState.day;
+  document.getElementById('pop').innerText = gameState.pop;
+  document.getElementById('food').innerText = gameState.food;
+  document.getElementById('wood').innerText = gameState.wood;
+  document.getElementById('civ').innerText = gameState.civ + "%";
+}
+
+function toggleMusic() {
+  const bgm = document.getElementById('bgm');
+  bgm.paused ? bgm.play() : bgm.pause();
+}
+
+setInterval(() => {
+  if (!document.getElementById("game-ui").classList.contains("active")) return;
+  gameState.day++;
+  let production = gameState.farms * 15;
+  let consumption = gameState.pop * 0.5;
+  gameState.food += (production - Math.floor(consumption));
+  if (gameState.food < 0) {
+    gameState.food = 0;
+    gameState.pop -= 5;
+    gameState.civ -= 10;
+    addLog("飢荒蔓延！子民正在死去，文明正在衰退。");
   }
-
-  function gatherWood() {
-    gameState.wood += 10;
-    addLog("派遣子民進入森林，採集了 10 單位木材。");
-    updateUI();
-  }
-
-  function build(type) {
-    if (type === 'farm' && gameState.wood >= 20) {
-      gameState.wood -= 20;
-      gameState.farms++;
-      addLog("農田建成，糧食產量提升。");
-    } else if (type === 'house' && gameState.wood >= 30) {
-      gameState.wood -= 30;
-      gameState.houses++;
-      gameState.pop += 10;
-      addLog("新建了民宅，流離失所的難民加入了我們。");
-    } else {
-      addLog("資源不足，無法建設！");
-    }
-    updateUI();
-  }
-
-  function updateUI() {
-    document.getElementById('day').innerText = gameState.day;
-    document.getElementById('pop').innerText = gameState.pop;
-    document.getElementById('food').innerText = gameState.food;
-    document.getElementById('wood').innerText = gameState.wood;
-    document.getElementById('civ').innerText = gameState.civ + "%";
-
-    if (gameState.civ <= 0) {
-      alert("文明火種熄滅，王朝覆滅...");
-      location.reload();
-    }
-  }
-
-  setInterval(() => {
-    if (!document.getElementById("game-ui").classList.contains("active")) return;
-
-    gameState.day++;
-    let production = gameState.farms * 15;
-    let consumption = gameState.pop * 0.5;
-    gameState.food += (production - Math.floor(consumption));
-
-    if (gameState.food < 0) {
-      gameState.food = 0;
-      gameState.pop -= 5;
-      gameState.civ -= 10;
-      addLog("飢荒蔓延！子民正在死去，文明正在衰退。");
-    }
-
-    updateUI();
-  }, 5000);
+  updateUI();
+}, 5000);
 </script>
 
 </body>

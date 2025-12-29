@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KingShot 原型開發</title>
+    <style>
+        body { margin: 0; background: #222; overflow: hidden; color: white; font-family: sans-serif; }
+        canvas { display: block; background: #333; margin: auto; }
+        .ui { position: absolute; top: 10px; left: 10px; pointer-events: none; }
+    </style>
+</head>
+<body>
+    <div class="ui">
+        <h2>KingShot 測試版</h2>
+        <p>操作：拖拽藍色球體進行彈射</p>
+    </div>
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // 物理參數
+        const friction = 0.98; // 摩擦力 (0.98 代表每幀速度保留 98%)
+        const wallBounciness = 0.7; // 撞牆後的彈性損耗
+
+        // 球體類別
+        class Ball {
+            constructor(x, y, radius, color, isPlayer = false) {
+                this.x = x;
+                this.y = y;
+                this.radius = radius;
+                this.color = color;
+                this.vx = 0;
+                this.vy = 0;
+                this.isPlayer = isPlayer;
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                ctx.closePath();
+            }
+
+            update() {
+                // 移動
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // 阻力
+                this.vx *= friction;
+                this.vy *= friction;
+
+                // 停止檢測
+                if (Math.abs(this.vx) < 0.1) this.vx = 0;
+                if (Math.abs(this.vy) < 0.1) this.vy = 0;
+
+                // 邊界碰撞
+                if (this.x + this.radius > canvas.width || this.x - this.radius < 0) {
+                    this.vx = -this.vx * wallBounciness;
+                    this.x = this.x < this.radius ? this.radius : canvas.width - this.radius;
+                }
+                if (this.y + this.radius > canvas.height || this.y - this.radius < 0) {
+                    this.vy = -this.vy * wallBounciness;
+                    this.y = this.y < this.radius ? this.radius : canvas.height - this.radius;
+                }
+            }
+        }
+
+        const player = new Ball(100, canvas.height / 2, 25, '#3b82f6', true);
+        const enemy = new Ball(canvas.width - 100, canvas.height / 2, 30, '#ef4444');
+
+        let isDragging = false;
+        let dragStartX, dragStartY;
+        let currentMouseX, currentMouseY;
+
+        // 監聽操作
+        canvas.addEventListener('mousedown', (e) => {
+            const dist = Math.hypot(e.clientX - player.x, e.clientY - player.y);
+            if (dist < player.radius && player.vx === 0 && player.vy === 0) {
+                isDragging = true;
+                dragStartX = player.x;
+                dragStartY = player.y;
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                currentMouseX = e.clientX;
+                currentMouseY = e.clientY;
+            }
+        });
+
+        canvas.addEventListener('mouseup', (e) => {
+            if (isDragging) {
+                isDragging = false;
+                // 計算力道 (反向彈射)
+                const dx = dragStartX - e.clientX;
+                const dy = dragStartY - e.clientY;
+                player.vx = dx * 0.15; // 0.15 為力道倍率
+                player.vy = dy * 0.15;
+            }
+        });
+
+        // 碰撞檢查
+        function checkCollision(b1, b2) {
+            const dx = b2.x - b1.x;
+            const dy = b2.y - b1.y;
+            const distance = Math.hypot(dx, dy);
+
+            if (distance < b1.radius + b2.radius) {
+                // 簡單的動量交換邏輯
+                const angle = Math.atan2(dy, dx);
+                const speed = Math.hypot(b1.vx, b1.vy);
+                
+                b2.vx = Math.cos(angle) * speed;
+                b2.vy = Math.sin(angle) * speed;
+                
+                b1.vx = -Math.cos(angle) * speed * 0.5;
+                b1.vy = -Math.sin(angle) * speed * 0.5;
+            }
+        }
+
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 繪製預測線
+            if (isDragging) {
+                ctx.beginPath();
+                ctx.moveTo(player.x, player.y);
+                ctx.lineTo(player.x + (dragStartX - currentMouseX), player.y + (dragStartY - currentMouseY));
+                ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
+                ctx.setLineDash([5, 5]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            player.update();
+            enemy.update();
+            checkCollision(player, enemy);
+
+            player.draw();
+            enemy.draw();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+    </script>
+</body>
+</html>

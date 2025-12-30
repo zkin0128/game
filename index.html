@@ -86,17 +86,24 @@
   <div class="stat-box">
     <h2>第 <span id="day">1</span> 天</h2>
     <p>人口: <span id="pop">50</span> | 糧食: <span id="food">100</span> | 木材: <span id="wood">50</span></p>
-    <p>文明火種: <span id="civ">100%</span></p>
+    <p>文明火種: <span id="civ">100%</span> | 武器: <span id="weapons">0</span></p>
+    <p>波次: <span id="wave">0</span> | 分數: <span id="score">0</span></p>
   </div>
   <div class="stat-box">
     <h3>建設與指令</h3>
     <button onclick="build('farm')">建造農田 (20木材)</button>
     <button onclick="build('house')">建造民宅 (30木材)</button>
-    <button onclick="gatherWood()">派遣採集 (每10秒+50)</button>
+    <button onclick="build('factory')">建造武器工廠 (50木材)</button>
+    <button onclick="gatherWood()">派遣伐木隊 (每10人1隊)</button>
   </div>
   <div class="stat-box">
     <h3>王國日誌</h3>
     <div id="log" class="log-box"></div>
+  </div>
+  <div id="game-over" style="display:none; text-align:center; margin-top:20px;">
+    <h2>🔥 文明已滅亡</h2>
+    <p>你撐過了 <span id="final-score">0</span> 天</p>
+    <button onclick="restartGame()">重新開始</button>
   </div>
 </div>
 
@@ -105,9 +112,20 @@
 </audio>
 <button id="music-toggle" onclick="toggleMusic()">🎵</button>
 
-<script>
+  <script>
 let gameState = {
-  day: 1, pop: 50, food: 100, wood: 50, civ: 100, farms: 1, houses: 1
+  day: 1,
+  pop: 50,
+  food: 100,
+  wood: 50,
+  civ: 100,
+  farms: 1,
+  houses: 1,
+  score: 0,
+  wave: 0,
+  weapons: 0,
+  factory: false,
+  weaponWorkers: 0
 };
 
 function startGame() {
@@ -115,6 +133,7 @@ function startGame() {
   document.getElementById("game-ui").classList.add("active");
   addLog("叛亂發生了，你帶領倖存者建立營地。");
   updateUI();
+  startWeaponProduction();
 }
 
 function addLog(msg) {
@@ -124,10 +143,18 @@ function addLog(msg) {
 }
 
 function gatherWood() {
-  addLog("伐木隊出發，10秒後回報...");
+  const workers = Math.floor(gameState.pop / 10);
+  const woodGain = 50 * workers;
+
+  if (workers === 0) {
+    addLog("人口太少，無法組成伐木隊！");
+    return;
+  }
+
+  addLog(`派出 ${workers} 組伐木隊，10秒後回報...`);
   setTimeout(() => {
-    gameState.wood += 50;
-    addLog("伐木隊回報：獲得 50 單位木材。");
+    gameState.wood += woodGain;
+    addLog(`伐木隊回報：獲得 ${woodGain} 單位木材。`);
     updateUI();
   }, 10000);
 }
@@ -142,8 +169,13 @@ function build(type) {
     gameState.houses++;
     gameState.pop += 10;
     addLog("新建了民宅，人口增加。");
+  } else if (type === 'factory' && gameState.wood >= 50 && !gameState.factory) {
+    gameState.wood -= 50;
+    gameState.factory = true;
+    gameState.weaponWorkers = 1;
+    addLog("建造了武器工廠，開始製造刀具！");
   } else {
-    addLog("資源不足，無法建設！");
+    addLog("資源不足或已建造過該建築！");
   }
   updateUI();
 }
@@ -154,6 +186,9 @@ function updateUI() {
   document.getElementById('food').innerText = gameState.food;
   document.getElementById('wood').innerText = gameState.wood;
   document.getElementById('civ').innerText = gameState.civ + "%";
+  document.getElementById('score').innerText = gameState.score;
+  document.getElementById('wave').innerText = gameState.wave;
+  document.getElementById('weapons').innerText = gameState.weapons;
 }
 
 function toggleMusic() {
@@ -161,6 +196,34 @@ function toggleMusic() {
   bgm.paused ? bgm.play() : bgm.pause();
 }
 
+function endGame() {
+  document.getElementById("game-over").style.display = "block";
+  document.getElementById("final-score").innerText = gameState.day;
+}
+
+function restartGame() {
+  gameState = {
+    day: 1,
+    pop: 50,
+    food: 100,
+    wood: 50,
+    civ: 100,
+    farms: 1,
+    houses: 1,
+    score: 0,
+    wave: 0,
+    weapons: 0,
+    factory: false,
+    weaponWorkers: 0
+  };
+  document.getElementById("log").innerHTML = "";
+  document.getElementById("game-over").style.display = "none";
+  addLog("你重建了新的王國，文明的火種再次點燃！");
+  updateUI();
+  startWeaponProduction();
+}
+
+// 每 5 秒：資源更新
 setInterval(() => {
   if (!document.getElementById("game-ui").classList.contains("active")) return;
   gameState.day++;
@@ -175,7 +238,40 @@ setInterval(() => {
   }
   updateUI();
 }, 5000);
-</script>
 
+// 每 10 秒：敵人來襲
+setInterval(() => {
+  if (!document.getElementById("game-ui").classList.contains("active")) return;
+  gameState.wave++;
+  let baseDamage = 5 + gameState.wave * 2;
+  let defense = Math.min(gameState.weapons, baseDamage);
+  let damage = baseDamage - defense;
+  gameState.weapons -= defense;
+  gameState.civ -= damage;
+  gameState.score += 10;
+  addLog(`第 ${gameState.wave} 波敵人來襲！造成 ${damage} 傷害（武器抵擋 ${defense}）`);
+
+  if (gameState.civ <= 0) {
+    gameState.civ = 0;
+    addLog("🔥 文明火種熄滅，遊戲結束！");
+    endGame();
+  }
+
+  updateUI();
+}, 10000);
+
+// 武器製造邏輯
+function startWeaponProduction() {
+  setInterval(() => {
+    if (gameState.factory && gameState.weaponWorkers > 0) {
+      const baseTime = 300; // 300秒 = 5分鐘
+      const timePerWeapon = Math.max(5, baseTime / gameState.weaponWorkers);
+      gameState.weapons += 1;
+      addLog("武器工廠製造了一把刀。");
+      updateUI();
+    }
+  }, 15000); // 每 15 秒檢查一次是否製造
+}
+</script>
 </body>
 </html>
